@@ -1,5 +1,5 @@
 import pyads.testserver
-from src.ads_client import ADSClient
+from src.ads_client import ADSTarget
 import pyads
 import time
 
