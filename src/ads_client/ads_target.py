@@ -109,8 +109,9 @@ class ADSTarget:
         adsAddress = adsAddress if adsAddress else self.adsAddress
         adsPort = adsPort if adsPort else self.adsPort
 
+        target_name = ("'" + self.name + "' ") if self.name else ""
         logging.info(
-            f"Creating connection to ADS target {("'" + self.name + "' ") if self.name else ""}at {adsAddress}:{adsPort}"
+            f"Creating connection to ADS target {target_name}at {adsAddress}:{adsPort}"
         )
 
         connection = MonitoredConnection(adsAddress, adsPort)
@@ -183,9 +184,7 @@ class ADSTarget:
             )
         )
 
-
     def read_device_info(self):
         """Read device information from the client"""
         with self.connection:
             return self.connection.read_device_info()
-        
