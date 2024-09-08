@@ -3,7 +3,7 @@ import pytest
 import time
 import pyads
 
-from src.ads_client import ADSTarget
+from ads_client import ADSTarget
 
 PYADS_TESTSERVER_ADS_ADDRESS = "127.0.0.1.1.1"
 PYADS_TESTSERVER_ADS_PORT = 48898
