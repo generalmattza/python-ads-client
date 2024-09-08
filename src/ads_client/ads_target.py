@@ -193,3 +193,7 @@ class ADSTarget:
         """Read all symbols from the client"""
         with self.connection:
             return self.connection.get_all_symbols()
+
+    def set_timeout(self, timeout: int) -> None:
+        """Set the timeout for the connection"""
+        self.connection.set_timeout(timeout)
