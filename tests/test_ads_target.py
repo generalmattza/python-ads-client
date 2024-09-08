@@ -1,4 +1,4 @@
-from tests.conftest import PYADS_TESTSERVER_VARIABLE_NAMES
+from conftest import PYADS_TESTSERVER_VARIABLE_NAMES
 
 TEST_VAR_NAMES = PYADS_TESTSERVER_VARIABLE_NAMES
 TEST_VARIABLES = [(var_name, n) for var_name, n in zip(TEST_VAR_NAMES, range(12))]
