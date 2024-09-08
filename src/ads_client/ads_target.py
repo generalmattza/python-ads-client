@@ -188,3 +188,8 @@ class ADSTarget:
         """Read device information from the client"""
         with self.connection:
             return self.connection.read_device_info()
+
+    def get_all_symbols(self):
+        """Read all symbols from the client"""
+        with self.connection:
+            return self.connection.get_all_symbols()
