@@ -136,23 +136,10 @@ class ADSTarget:
                 if verify:
                     assert conn.read_by_name(varName) == value
 
-    def batch_write_by_name(
-        self, variables: Union[tuple, list, set], verify: bool = False
-    ) -> None:
+    def write_list_by_name(self, variables: dict, verify: bool = False) -> None:
         """Write appropriate values to different types of PLC tags"""
         with self.connection:
-            if isinstance(variables, (list, tuple, set)):
-                for variable in variables:
-                    if len(variable) != 2:
-                        raise ValueError(
-                            "Variable must be a tuple with the variable name and value"
-                        )
-                    self.write_by_name(*variable, verify)
-            else:
-                raise TypeError(
-                    "'variables' arg must be a list, tuple, or set of tuples with the variable name and value"
-                )
-            return True
+            self.connection.write_list_by_name(variables)
 
     def read_by_name(self, varName: str):
         """Read PLC tags using ads address and plc tag name"""
@@ -162,19 +149,10 @@ class ADSTarget:
             with self.connection as conn:
                 return conn.read_by_name(varName)
 
-    def batch_read_by_name(self, varNames: Union[str, list, tuple, set]):
+    def read_list_by_name(self, varNames: Union[str, list, tuple, set]):
         """Read one or multiple PLC tags using ads address and plc tag names"""
         with self.connection:
-            # Check if varNames is a string (single variable)
-            if isinstance(varNames, str):
-                # Read a single variable
-                return self.read_by_name(varNames)
-            # If varNames is a container (list, tuple, set), iterate over it
-            elif isinstance(varNames, (list, tuple, set)):
-                # Read multiple variables
-                return {varName: self.read_by_name(varName) for varName in varNames}
-            else:
-                raise TypeError("varNames must be a string or a container of strings")
+            return self.connection.read_list_by_name(varNames)
 
     def read_errors(self, varName: str, numberOfErrors=1):
         """Read error messages from the client"""
@@ -197,3 +175,6 @@ class ADSTarget:
     def set_timeout(self, timeout: int) -> None:
         """Set the timeout for the connection"""
         self.connection.set_timeout(timeout)
+
+    def __repr__(self):
+        return f"ADSTarget(adsAddress={self.adsAddress}, adsPort={self.adsPort}, name={self.name})"
