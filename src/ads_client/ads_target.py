@@ -55,24 +55,24 @@ class MonitoredConnection(pyads.Connection):
     def open(self):
         if self.is_open:
             return
-        self.logger.info(f"Opening connection to {self.ip_address}")
+        self.logger.debug(f"Opening connection to {self.ip_address}")
         super().open()
         self.open_events.labels(self.ams_net_id).inc()
 
     def close(self):
         if not self.is_open:
             return
-        self.logger.info(f"Closing connection to {self.ip_address}")
+        self.logger.debug(f"Closing connection to {self.ip_address}")
         super().close()
         self.close_events.labels(self.ams_net_id).inc()
 
     def read_by_name(self, varName: str) -> Any:
-        self.logger.info(f"Reading variable {varName}")
+        self.logger.debug(f"Reading variable {varName}")
         self.read_events.labels(self.ams_net_id).inc()
         return super().read_by_name(varName)
 
     def write_by_name(self, varName: str, value: Any) -> None:
-        self.logger.info(f"Writing {value} to variable {varName}")
+        self.logger.debug(f"Writing {value} to variable {varName}")
         self.write_events.labels(self.ams_net_id).inc()
         super().write_by_name(varName, value)
 
