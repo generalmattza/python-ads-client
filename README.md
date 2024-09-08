@@ -1,4 +1,4 @@
-# project_name
+# python-ads-client
 ### project_summary
 
 project description
