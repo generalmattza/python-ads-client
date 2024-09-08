@@ -5,7 +5,7 @@
 # Created Date: 2024-09-08
 # version ='1.0'
 # ---------------------------------------------------------------------------
-"""a_short_module_description"""
+"""ADSTarget class to manage the connection to an ADS target device"""
 # ---------------------------------------------------------------------------
 
 
