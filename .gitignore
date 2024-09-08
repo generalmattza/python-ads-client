@@ -165,5 +165,9 @@ cython_debug/
 
 # Secrets
 .*
-!.*-default
 
+# Forced inclusions
+!.*-default
+!.env
+!.github
+!.coveragerc

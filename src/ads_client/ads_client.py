@@ -27,65 +27,41 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def openADSConnection(adsAddress, port=pyads.PORT_TC3PLC1):
+def openADSConnection(adsAddress, adsPort=pyads.PORT_TC3PLC1):
     """Open an ads connection to Beckhoff PLC using the ads address."""
-    plc = pyads.Connection(adsAddress, port)
-    # TODO Run some checks to ensure the connection is open
-    return plc
+    connection = pyads.Connection(adsAddress, adsPort)
+    assert connection.is_open
+    return connection
 
 
-class ADSTarget:
-    """Class to manage the ADS target connection"""
+class LoggedConnection(pyads.Connection):
 
-    def __init__(self, adsAddress=None, adsPort=pyads.PORT_TC3PLC1):
-        self.adsAddress = adsAddress
-        self.adsPort = adsPort
-        self._adsTarget = None
-
-    def createConnection(self, adsAddress=None, adsPort=pyads.PORT_TC3PLC1):
-        """Creates an ads connection to Beckhoff PLC using the ads address."""
-        if adsAddress is None and self.adsAddress is None:
-            raise ValueError(
-                "Cannot open ADS connection: No ads address provided. Specify a valid ads address."
-            )
-        if adsPort is None and self.port is None:
-            raise ValueError(
-                "Cannot open ADS connection: No port provided. Specify a valid port."
-            )
-
-        adsAddress = adsAddress if adsAddress else self.adsAddress
-        adsTarget = pyads.Connection(adsAddress, adsPort)
-        return adsTarget
-
-    def close(self):
-        """Close PLC connection."""
-        self.adsTarget.close()
+    def __init__(self, adsAddress, adsPort):
+        super().__init__(adsAddress, adsPort)
+        self.logger = logging.getLogger(__name__)
+        self.open_events = 0
+        self.close_events = 0
 
     def open(self):
-        """Open PLC connection."""
-        self.adsTarget.open()
+        self.logger.info(f"Opening connection to {self.ip_address}")
+        self.open_events += 1
+        super().open()
 
-    @property
-    def adsTarget(self):
-        if self._adsTarget is None:
-            logger.info("No ADS target exists. Opening new ADS connection to target")
-            self._adsTarget = self.createConnection()
-        return self._adsTarget
+    def close(self):
+        self.logger.info(f"Closing connection to {self.ip_address}")
+        self.close_events += 1
+        super().close()
 
-    @adsTarget.setter
-    def adsTarget(self, adsConnection):
-        self._adsTarget = adsConnection
+    def read_by_name(self, varName):
+        self.logger.info(f"Reading variable {varName}")
+        return super().read_by_name(varName)
 
-    @property
-    def is_open(self):
-        """Check if the connection is open."""
-        return self.adsTarget.is_open
+    def write_by_name(self, varName, value):
+        self.logger.info(f"Writing {value} to variable {varName}")
+        return super().write_by_name(varName, value)
 
-    def __enter__(self):
-        return self.adsTarget
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.adsTarget.close()
+    def __repr__(self):
+        return f"LoggedConnection(ip_address={self.ip_address}, port={self.ams_port}, open_events={self.open_events}, close_events={self.close_events})"
 
 
 class ADSClient:
@@ -94,50 +70,76 @@ class ADSClient:
     def __init__(self, adsAddress=None, adsPort=pyads.PORT_TC3PLC1):
         self.adsAddress = adsAddress
         self.adsPort = adsPort
+        self.connection = self.createConnection(adsAddress, adsPort)
 
-    def openConnection(self, adsAddress=None, adsPort=pyads.PORT_TC3PLC1):
-        """Open an ads connection to Beckhoff PLC using the ads address."""
+    def createConnection(self, adsAddress=None, adsPort=None):
+        """Creates a ads connection to Beckhoff PLC using the ads address."""
         if adsAddress is None and self.adsAddress is None:
             raise ValueError(
                 "Cannot open ADS connection: No ads address provided. Specify a valid ads address."
             )
-        if adsPort is None and self.port is None:
+        if adsPort is None and self.adsPort is None:
             raise ValueError(
                 "Cannot open ADS connection: No port provided. Specify a valid port."
             )
-
         adsAddress = adsAddress if adsAddress else self.adsAddress
-        self.adsTarget = ADSTarget(adsAddress, adsPort)
-        self.adsTarget.open()
+        adsPort = adsPort if adsPort else self.adsPort
 
-    def _writeVariable(self, adsTarget, varName, value, checkValue=True):
-        """Write appropriate values to different types of PLC tags"""
+        connection = LoggedConnection(adsAddress, adsPort)
+
+        with connection:
+            assert connection.is_open
+
+        return connection
+
+    def writeVariable(self, varName, value, checkValue=True):
+        """Write appropriate values to different types of PLC tags
+        Uses the context manager to open and close the connection during the write operation
+        """
+        with self.connection as adsTarget:
+            adsTarget.write_by_name(varName, value)
+            if checkValue:
+                assert adsTarget.read_by_name(varName) == value
+            return
+
+    def _writeVariable(self, adsTarget, varName, value, checkValue=True) -> None:
+        """Write appropriate values to different types of PLC tags
+        Does not open or close the connection during the write operation"""
         adsTarget.write_by_name(varName, value)
         if checkValue:
             assert adsTarget.read_by_name(varName) == value
-        return True
+        return
 
-    def writeVariables(self, *varNames, value, checkValue=True):
+    def writeVariables(self, variables, checkValue=True):
         """Write appropriate values to different types of PLC tags"""
-        try:
-            with self.adsTarget as adsTarget:
-                if isinstance(varNames, str):
-                    self._writeVariable(adsTarget, varNames, value, checkValue)
-                elif isinstance(varNames, (list, tuple, set)):
-                    for varName in varNames:
-                        self._writeVariable(adsTarget, varName, value, checkValue)
-                return True
-        except Exception as e:
-            return f"Something went wrong {e}"
+        with self.connection as adsTarget:
+            if isinstance(variables, (list, tuple, set)):
+                for variable in variables:
+                    if len(variable) != 2:
+                        raise ValueError(
+                            "Variable must be a tuple with the variable name and value"
+                        )
+                    self._writeVariable(adsTarget, *variable, checkValue)
+            else:
+                raise TypeError(
+                    "'variables' arg must be a list, tuple, or set of tuples with the variable name and value"
+                )
+            return True
+
+    def readVariable(self, varName):
+        """Read PLC tags using ads address and plc tag name"""
+        with self.connection as adsTarget:
+            return adsTarget.read_by_name(varName)
 
     def _readVariable(self, adsTarget, varName):
-        """Read PLC tags using ads address and plc tag name"""
+        """Read PLC tags using ads address and plc tag name
+        Does not open or close the connection during the read operation"""
         return adsTarget.read_by_name(varName)
 
     def readVariables(self, varNames):
         """Read one or multiple PLC tags using ads address and plc tag names"""
         try:
-            with self.adsTarget as adsTarget:
+            with self.connection as adsTarget:
                 # Check if varNames is a string (single variable)
                 if isinstance(varNames, str):
                     # Read a single variable
