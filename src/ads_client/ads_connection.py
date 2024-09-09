@@ -83,8 +83,9 @@ class ADSConnection(pyads.Connection):
 
     def __init__(
         self,
-        adsAddress: str,
-        adsPort: str = pyads.PORT_TC3PLC1,
+        ams_net_id: str,
+        ip_address: str = None,
+        ams_net_port: str = pyads.PORT_TC3PLC1,
         name: str = None,
         verify_is_open: bool = False
     ):
@@ -94,15 +95,15 @@ class ADSConnection(pyads.Connection):
             self.name = next(ADSConnection.connection_id)
 
         # Verify adsAddress
-        verify_ams_net_id(adsAddress)
+        verify_ams_net_id(ams_net_id)
 
         connection_name = f"'{self.name}' " if self.name else ""
         logging.info(
-            f"Creating ADS connection {connection_name}to {adsAddress}:{adsPort}"
+            f"Creating ADS connection {connection_name}to {ams_net_id}:{ams_net_port}"
         )
 
         # Initialize the parent class (pyads.Connection)
-        super().__init__(adsAddress, adsPort)
+        super().__init__(ams_net_id=ams_net_id, ams_net_port=ams_net_port, ip_address=ip_address)
 
         # Ensure connection is open if requested
         if verify_is_open:
@@ -121,22 +122,36 @@ class ADSConnection(pyads.Connection):
             if verify:
                 assert super().read_by_name(varName) == value
 
-    def write_array_by_name(self, varName: str, value: Any, datatype = pyads.PLCTYPE_ARR_INT, verify: bool = False) -> None:
+    def write_array_by_name(self, varName: str, value: Any, plc_datatype = None, verify: bool = False) -> None:
         """Write an array to a PLC variable."""
+        if plc_datatype is None:
+            logger.warning("No PLC datatype provided, defaulting to LREAL")
+            plc_datatype = pyads.PLCTYPE_LREAL
         with self:
-            super().write_by_name(varName, value, plc_datatype=datatype*len(value))
+            super().write_by_name(varName, value, plc_datatype=plc_datatype*len(value))
             if verify:
-                assert super().read_by_name(varName, plc_datatype=datatype*len(value)) == value
+                assert super().read_by_name(varName, plc_datatype=plc_datatype*len(value)) == value
+
+    def write_list_array_by_name(self, variables: dict, plc_datatype = None, verify: bool = False) -> None:
+        """Write multiple arrays to PLC variables."""
+        if plc_datatype is None:
+            logger.warning("No PLC datatype provided, defaulting to LREAL")
+            plc_datatype = pyads.PLCTYPE_LREAL
+        with self:
+            for varName, value in variables.items():
+                self.write_array_by_name(varName, value, plc_datatype=plc_datatype, verify=verify)
                 
     def write_list_by_name(self, variables: dict, verify: bool = False) -> None:
         """Write multiple values to PLC variables."""
         with self:
             super().write_list_by_name(variables)
+            if verify:
+                assert super().read_list_by_name(variables) == variables
 
-    def read_by_name(self, varName: str):
+    def read_by_name(self, varName: str, plc_datatype = None) -> Any:
         """Read a PLC variable by name."""
         with self:
-            return super().read_by_name(varName)
+            return super().read_by_name(varName, plc_datatype=plc_datatype)
 
     def read_list_by_name(self, varNames: Union[str, list, tuple, set]):
         """Read multiple PLC variables by their names."""
@@ -168,25 +183,23 @@ class ADSConnection(pyads.Connection):
     def open(self):
         if self.is_open:
             return
-        logger.debug(f"Opening connection to {self.ip_address}")
+        logger.debug(f"Opening connection to {self.connection_address}")
         super().open()
+        logger.debug(f"Connection to {self.connection_address} opened")
         self.open_events.labels(self.ams_net_id).inc()
 
     def close(self):
         if not self.is_open:
             return
-        logger.debug(f"Closing connection to {self.ip_address}")
+        logger.debug(f"Closing connection to {self.connection_address}")
         super().close()
+        logger.debug(f"Connection to {self.connection_address} closed")
         self.close_events.labels(self.ams_net_id).inc()
 
+    @property
+    def connection_address(self):
+        """Return the device address."""
+        return f"{self.ip_address}:{self.ams_net_port}"
+
     def __repr__(self):
-        return f"ADSTarget(adsAddress={self.ams_net_id}, adsPort={self.ams_net_port}, name={self.name})"
-
-    def __enter__(self):
-        """Open the connection when entering the context."""
-        self.open()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Close the connection when exiting the context."""
-        self.close()
+        return f"ADSTarget(ams_net_id={self.ams_net_id}, ams_net_port={self.ams_net_port}, name={self.name})"
