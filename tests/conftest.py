@@ -1,9 +1,15 @@
-import pyads.testserver
-import pytest
+import logging
 import time
+
+try:
+    import pyads.testserver
+except FileNotFoundError as e:
+    logging.error(f"{e}. Check that TwinCAT software is installed and configured properly")
+    raise e
+import pytest
 import pyads
 
-from ads_client import ADSTarget
+from ads_client import ADSConnection
 
 PYADS_TESTSERVER_ADS_ADDRESS = "127.0.0.1.1.1"
 PYADS_TESTSERVER_ADS_PORT = 48898
@@ -14,7 +20,7 @@ PYADS_TESTSERVER_TIMEOUT_MS = 1000
 @pytest.fixture
 def testserver_target():
     """Fixture to create an instance of the ADS client class."""
-    target = ADSTarget(
+    target = ADSConnection(
         adsAddress=PYADS_TESTSERVER_ADS_ADDRESS, adsPort=PYADS_TESTSERVER_ADS_PORT
     )
     target.set_timeout(PYADS_TESTSERVER_TIMEOUT_MS)
