@@ -68,3 +68,21 @@ def test_get_all_symbols(testserver_advanced, testserver_target):
     """Test getting all symbols using the ADS client class."""
     all_symbols = testserver_target.get_all_symbols()
     assert len(all_symbols) == len(TEST_VAR_NAMES)
+
+
+def test_verify_ams_net_id():
+    """Tests function to verify AMS NetID format"""
+    from ads_client.ads_connection import verify_ams_net_id, AMSNetIDFormatError
+
+    # Valid id
+    verify_ams_net_id("127.123.12.34.1.1")
+
+    # Invalid ids
+    with pytest.raises(AMSNetIDFormatError):
+        verify_ams_net_id("123.4.56.787.66.1")
+        verify_ams_net_id("123.4.56.87.66.1.1")
+
+
+# def test_write_array_by_name(testserver_advanced, testserver_target):
+#     """Test writing an array by name using the ADS client class."""
+#     testserver_target.write_array_by_name("testarray", [1, 2, 3, 4, 5], verify=True)
