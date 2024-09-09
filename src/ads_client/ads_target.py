@@ -178,3 +178,10 @@ class ADSTarget:
 
     def __repr__(self):
         return f"ADSTarget(adsAddress={self.adsAddress}, adsPort={self.adsPort}, name={self.name})"
+
+    def __enter__(self):
+        self.connection.open()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.connection.close()

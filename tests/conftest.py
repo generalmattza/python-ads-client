@@ -18,7 +18,9 @@ def testserver_target():
         adsAddress=PYADS_TESTSERVER_ADS_ADDRESS, adsPort=PYADS_TESTSERVER_ADS_PORT
     )
     target.set_timeout(PYADS_TESTSERVER_TIMEOUT_MS)
-    return target
+
+    with target:
+        yield target
 
 
 @pytest.fixture(scope="session")
