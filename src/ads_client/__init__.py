@@ -1,2 +1,2 @@
 __version__ = "0.0.0"
-from .ads_client import ADSTarget, ADSClient
+from .ads_target import ADSTarget
