@@ -143,7 +143,10 @@ class ADSConnection(pyads.Connection):
             if verify:
                 assert (
                     super().read_by_name(
-                        varName, plc_datatype=plc_datatype * len(value)
+                        varName,
+                        plc_datatype=(
+                            plc_datatype * len(value) if plc_datatype else None
+                        ),
                     )
                     == value
                 )
@@ -177,6 +180,27 @@ class ADSConnection(pyads.Connection):
                 logger.warning(
                     f"Variable {varName} does not have a type declared in PLC. Ignoring read operation."
                 )
+
+    def read_array_by_name(self, varName: str, plc_datatype=None, array_size=1):
+        """Read an array from a PLC variable."""
+        with self:
+            return super().read_by_name(
+                varName,
+                plc_datatype=plc_datatype * array_size if plc_datatype else None,
+            )
+
+    def read_list_array_by_name(
+        self, varNames: Union[str, list, tuple, set], plc_datatype=None, array_size=1
+    ):
+        """Read multiple PLC variables by their names."""
+        with self:
+            return {
+                varName: super().read_by_name(
+                    varNames,
+                    plc_datatype=plc_datatype * array_size if plc_datatype else None,
+                )
+                for varName in varNames
+            }
 
     def read_list_by_name(self, varNames: Union[str, list, tuple, set]):
         """Read multiple PLC variables by their names."""
@@ -227,4 +251,4 @@ class ADSConnection(pyads.Connection):
         return f"{self.ip_address}:{self.ams_net_port}"
 
     def __repr__(self):
-        return f"ADSTarget(ams_net_id={self.ams_net_id}, ams_net_port={self.ams_net_port}, name={self.name})"
+        return f"{self.__class__.__name__}(ams_net_id={self.ams_net_id}, ams_net_port={self.ams_net_port}, name={self.name})"
