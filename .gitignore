@@ -167,7 +167,7 @@ cython_debug/
 .*
 # Ignore logs
 *.log
-logs/*.log
+logs/*.*
 
 # Forced inclusions
 !.*-default
