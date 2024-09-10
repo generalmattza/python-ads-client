@@ -5,14 +5,36 @@ handlers:
     level: DEBUG
     stream: ext://sys.stdout
 
+  pyads.debug.file:
+    class : logging.handlers.RotatingFileHandler
+    formatter: json
+    level   : DEBUG
+    filename: logs/pyads.debug.log
+    maxBytes: 10_000_000
+    backupCount: 7
+    
+  ads_client.debug.file:
+    class : logging.handlers.RotatingFileHandler
+    formatter: json
+    level   : DEBUG
+    filename: logs/ads_client.debug.log
+    maxBytes: 10_000_000
+    backupCount: 7
+
 loggers:
   pyads:
     level: DEBUG
     handlers:
-      - console
+      - pyads.debug.file
     propagate: no
 
-  root:
+  ads_client:
     level: DEBUG
+    handlers:
+      - console
+      - ads_client.debug.file
+
+  root:
+    level: INFO
     handlers:
       - console
