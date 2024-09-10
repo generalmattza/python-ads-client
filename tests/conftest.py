@@ -25,7 +25,7 @@ except FileNotFoundError as e:
     )
     raise e
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("testing")
 
 # Configure logging using the specified logging configuration
 dictConfig(load_configs("config/logging.yaml"))
