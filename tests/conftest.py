@@ -100,8 +100,8 @@ def get_variable_kwargs(variable_type: str, initial_value: bytes = bytes(8)):
         )
     elif variable_type == "bools":
         return dict(
-            value=initial_value,
-            ads_type=pyads.constants.ADST_INT8,
+            value=False,
+            ads_type=pyads.constants.ADST_BIT,
             symbol_type="BOOL",
         )
     else:
@@ -115,11 +115,12 @@ def get_total_length(variables):
     return sum(len(variables[key]) for key in variables)
 
 
-TESTSERVER_VARIABLES_SMALL = generate_dataset(10)
-TESTSERVER_ARRAY_VARIABLES_SMALL = generate_dataset(1, 10)
+TEST_DATASET = {}
+TEST_DATASET["single_small"] = generate_dataset(10)
+TEST_DATASET["single_large"] = generate_dataset(10)
 
-TESTSERVER_VARIABLES_LARGE = generate_dataset(100)
-TESTSERVER_ARRAY_VARIABLES_LARGE = generate_dataset(100, 100)
+TEST_DATASET["array_small"] = generate_dataset(1, 1)
+TEST_DATASET["array_large"] = generate_dataset(2, 100)
 
 # TESTSERVER_VARNAMES = {
 #     "integers": [f"int{n}" for n in range(VALUE_DIMENSION)],
@@ -179,6 +180,12 @@ def add_route(ams_net_id="127.0.0.1.1.1", ip_address="127.0.0.1"):
         pass
 
 
+add_route(
+    ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS,
+    ip_address=PYADS_TESTSERVER_IP_ADDRESS,
+)
+
+
 # Test fixtures
 @pytest.fixture
 def testserver_target():
@@ -219,17 +226,25 @@ def add_variables(handler, variables):
 
 def init_testserver_advanced(variables):
     handler = pyads.testserver.AdvancedHandler()
-    add_variables(handler, variables)
+    if isinstance(variables, list):
+        for vars in variables:
+            add_variables(handler, vars)
+    else:
+        add_variables(handler, variables)
     testserver = pyads.testserver.AdsTestServer(handler)
-    time.sleep(1)
-    add_route(
-        ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS,
-        ip_address=PYADS_TESTSERVER_IP_ADDRESS,
-    )
+    time.sleep(0.1)
+
     return testserver
 
 
 @pytest.fixture(scope="session")
-def testserver_advanced_small():
-    with init_testserver_advanced(TESTSERVER_VARIABLES_SMALL) as testserver:
+def testserver_advanced():
+    with init_testserver_advanced(
+        [
+            TEST_DATASET["single_small"],
+            TEST_DATASET["single_large"],
+            # TEST_DATASET["array_small"],
+            # TEST_DATASET["array_large"],
+        ]
+    ) as testserver:
         yield testserver
