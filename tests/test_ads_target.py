@@ -1,47 +1,74 @@
 import pytest
 import pyads
 from conftest import (
-    TESTSERVER_VARIABLES,
-    TESTSERVER_ARRAY_VARIABLES,
-    TESTSERVER_TOTAL_VARIABLES,
+    TEST_DATASET,
+    # TESTSERVER_TOTAL_VARIABLES,
 )
+import logging
 
 
-def test_read_by_name(testserver_advanced, testserver_target):
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_read_by_name(testserver_advanced, testserver_target, variable_type, dataset):
     """Test single reading by name using the ADS client class."""
-    for variable_type in TESTSERVER_VARIABLES:
-        [testserver_target.read_by_name(var_name) for var_name in TESTSERVER_VARIABLES[variable_type]]
+    variables = TEST_DATASET[dataset][variable_type]
+
+    for var_name in variables:
+        testserver_target.read_by_name(var_name)
 
 
-def test_write_by_name(testserver_advanced, testserver_target):
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_write_by_name(testserver_advanced, testserver_target, variable_type, dataset):
     """Test single writing by name using the ADS client class."""
-    for variable_type in TESTSERVER_VARIABLES:
-        for variable in TESTSERVER_VARIABLES[variable_type].items():
-            testserver_target.write_by_name(
-                *variable, verify=True
-            )
+    variables = TEST_DATASET[dataset][variable_type]
+    for variable in variables.items():
+        testserver_target.write_by_name(*variable, verify=False)
 
 
-def test_read_write_list_by_name(testserver_advanced, testserver_target):
-    """Test batch writing by name using the ADS client class."""
-    for variable_type in TESTSERVER_VARIABLES:
-        variables = TESTSERVER_VARIABLES[variable_type]
-        # First write the variables so they can be read
-        testserver_target.write_list_by_name(variables, verify=False)
-        variables_read = testserver_target.read_list_by_name(variables)
-        assert variables_read == variables
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_write_by_name_verify(
+    testserver_advanced, testserver_target, variable_type, dataset
+):
+    """Test single writing by name using the ADS client class."""
+    variables = TEST_DATASET[dataset][variable_type]
+    for variable in variables.items():
+        testserver_target.write_by_name(*variable, verify=True)
 
-def test_write_list_by_name_verify(testserver_advanced, testserver_target):
+
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_read_write_list_by_name(
+    testserver_advanced, testserver_target, variable_type, dataset
+):
+    """Test batch writing by name using the ADS client class. Perform a manual verification."""
+    variables = TEST_DATASET[dataset][variable_type]
+    testserver_target.write_list_by_name(variables, verify=False)
+    read_variables = testserver_target.read_list_by_name(variables)
+    assert variables == read_variables
+
+
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_write_list_by_name_verify(
+    testserver_advanced, testserver_target, variable_type, dataset
+):
     """Test batch writing by name with verification using the ADS client class."""
-    for variable_type in TESTSERVER_VARIABLES:
-        variables = TESTSERVER_VARIABLES[variable_type]
-        testserver_target.write_list_by_name(variables, verify=True)
+    variables = TEST_DATASET[dataset][variable_type]
+    testserver_target.write_list_by_name(variables, verify=True)
 
-def test_write_by_name_verify(testserver_advanced, testserver_target):
+
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_write_by_name_verify(
+    testserver_advanced, testserver_target, variable_type, dataset
+):
     """Test writing by name with verification using the ADS client class."""
-    for variable_type in TESTSERVER_VARIABLES:
-        for variable in TESTSERVER_VARIABLES[variable_type].items():
-            testserver_target.write_by_name(*variable, verify=True)
+    variables = TEST_DATASET[dataset][variable_type]
+    for variable in variables.items():
+        testserver_target.write_by_name(*variable, verify=True)
+
 
 def test_read_device_info(testserver_advanced, testserver_target):
     """Test reading device info using the ADS client class."""
@@ -64,7 +91,7 @@ def test_false_write_by_name(testserver_advanced, testserver_target):
 def test_get_all_symbols(testserver_advanced, testserver_target):
     """Test getting all symbols using the ADS client class."""
     all_symbols = testserver_target.get_all_symbols()
-    assert len(all_symbols) == TESTSERVER_TOTAL_VARIABLES
+    assert len(all_symbols) == testserver_advanced.total_variables
 
 
 def test_verify_ams_net_id():
@@ -86,14 +113,37 @@ def test_write_array_by_name(testserver_advanced, testserver_target):
         for variable in TESTSERVER_ARRAY_VARIABLES[variable_type].items():
             testserver_target.write_array_by_name(*variable, verify=False)
 
+
 def test_write_list_array_by_name(testserver_advanced, testserver_target):
     """Test writing multiple arrays by name using the ADS client class."""
     for variable_type in TESTSERVER_ARRAY_VARIABLES:
         variables = TESTSERVER_ARRAY_VARIABLES[variable_type]
         testserver_target.write_list_array_by_name(variables, verify=False)
 
+
 def test_write_list_array_by_name_verify(testserver_advanced, testserver_target):
     """Test writing multiple arrays by name with verification using the ADS client class."""
     for variable_type in TESTSERVER_ARRAY_VARIABLES:
         variables = TESTSERVER_ARRAY_VARIABLES[variable_type]
         testserver_target.write_list_array_by_name(variables, verify=True)
+
+
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+def test_write_performance(
+    benchmark, testserver_advanced, testserver_target, variable_type, dataset
+):
+    """Test the performance of writing by name using the ADS client class."""
+
+    variables = TEST_DATASET[dataset][variable_type]
+
+    def write_operation():
+        for variable in variables.items():
+            testserver_target.write_by_name(*variable, verify=False)
+
+    # Use pytest-benchmark for timing
+    # write_operation()
+    benchmark(write_operation)
+
+    # Optionally, you can assert something, like a maximum duration:
+    # benchmark.extra_info['variable_count'] = len(variables)
