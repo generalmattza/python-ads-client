@@ -1,25 +1,27 @@
 import pytest
 import pyads
 from conftest import (
-    TESTSERVER_VARIABLES,
-    TESTSERVER_ARRAY_VARIABLES,
-    TESTSERVER_TOTAL_VARIABLES,
+    TESTSERVER_VARIABLES_SMALL,
+    TESTSERVER_ARRAY_VARIABLES_SMALL,
+    TESTSERVER_VARIABLES_LARGE,
+    TESTSERVER_ARRAY_VARIABLES_LARGE,
+    # TESTSERVER_TOTAL_VARIABLES,
 )
+import logging
 
 
-def test_read_by_name(testserver_advanced, testserver_target):
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+def test_read_by_name(testserver_advanced_small, testserver_target, variable_type):
     """Test single reading by name using the ADS client class."""
-    for variable_type in TESTSERVER_VARIABLES:
-        [testserver_target.read_by_name(var_name) for var_name in TESTSERVER_VARIABLES[variable_type]]
+    variables = TESTSERVER_VARIABLES_SMALL[variable_type]
+    [testserver_target.read_by_name(var_name) for var_name in variables]
 
 
 def test_write_by_name(testserver_advanced, testserver_target):
     """Test single writing by name using the ADS client class."""
     for variable_type in TESTSERVER_VARIABLES:
         for variable in TESTSERVER_VARIABLES[variable_type].items():
-            testserver_target.write_by_name(
-                *variable, verify=True
-            )
+            testserver_target.write_by_name(*variable, verify=True)
 
 
 def test_read_write_list_by_name(testserver_advanced, testserver_target):
@@ -31,17 +33,20 @@ def test_read_write_list_by_name(testserver_advanced, testserver_target):
         variables_read = testserver_target.read_list_by_name(variables)
         assert variables_read == variables
 
+
 def test_write_list_by_name_verify(testserver_advanced, testserver_target):
     """Test batch writing by name with verification using the ADS client class."""
     for variable_type in TESTSERVER_VARIABLES:
         variables = TESTSERVER_VARIABLES[variable_type]
         testserver_target.write_list_by_name(variables, verify=True)
 
+
 def test_write_by_name_verify(testserver_advanced, testserver_target):
     """Test writing by name with verification using the ADS client class."""
     for variable_type in TESTSERVER_VARIABLES:
         for variable in TESTSERVER_VARIABLES[variable_type].items():
             testserver_target.write_by_name(*variable, verify=True)
+
 
 def test_read_device_info(testserver_advanced, testserver_target):
     """Test reading device info using the ADS client class."""
@@ -86,14 +91,36 @@ def test_write_array_by_name(testserver_advanced, testserver_target):
         for variable in TESTSERVER_ARRAY_VARIABLES[variable_type].items():
             testserver_target.write_array_by_name(*variable, verify=False)
 
+
 def test_write_list_array_by_name(testserver_advanced, testserver_target):
     """Test writing multiple arrays by name using the ADS client class."""
     for variable_type in TESTSERVER_ARRAY_VARIABLES:
         variables = TESTSERVER_ARRAY_VARIABLES[variable_type]
         testserver_target.write_list_array_by_name(variables, verify=False)
 
+
 def test_write_list_array_by_name_verify(testserver_advanced, testserver_target):
     """Test writing multiple arrays by name with verification using the ADS client class."""
     for variable_type in TESTSERVER_ARRAY_VARIABLES:
         variables = TESTSERVER_ARRAY_VARIABLES[variable_type]
         testserver_target.write_list_array_by_name(variables, verify=True)
+
+
+@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+def test_write_performance(
+    benchmark, testserver_advanced, testserver_target, variable_type
+):
+    """Test the performance of writing by name using the ADS client class."""
+
+    variables = TESTSERVER_VARIABLES[variable_type]
+
+    def write_operation():
+        for variable in variables.items():
+            testserver_target.write_by_name(*variable, verify=False)
+
+    # Use pytest-benchmark for timing
+    # write_operation()
+    benchmark(write_operation)
+
+    # Optionally, you can assert something, like a maximum duration:
+    # benchmark.extra_info['variable_count'] = len(variables)
