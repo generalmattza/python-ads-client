@@ -119,8 +119,8 @@ TEST_DATASET = {}
 TEST_DATASET["single_small"] = generate_dataset(10)
 TEST_DATASET["single_large"] = generate_dataset(10)
 
-TEST_DATASET["array_small"] = generate_dataset(1, 1)
-TEST_DATASET["array_large"] = generate_dataset(2, 100)
+TEST_DATASET["array_small"] = generate_dataset(1, 2)
+TEST_DATASET["array_large"] = generate_dataset(2, 20)
 
 # TESTSERVER_VARNAMES = {
 #     "integers": [f"int{n}" for n in range(VALUE_DIMENSION)],
@@ -199,10 +199,10 @@ def testserver_target():
 
 
 def add_variables(handler, variables):
-    for var_type, variables in variables.items():
-        for var_name in variables:
+    for var_type, variable_list in variables.items():
+        for var_name in variable_list:
             try:
-                len(variables[var_name])
+                len(variable_list[var_name])
             except TypeError:
                 # Create a single variable
                 handler.add_variable(
@@ -218,7 +218,7 @@ def add_variables(handler, variables):
                     pyads.testserver.PLCVariable(
                         var_name,
                         value=kwargs["value"],
-                        ads_type=kwargs["ads_type"] * len(variables[var_name]),
+                        ads_type=kwargs["ads_type"] * len(variable_list[var_name]),
                         symbol_type=kwargs["symbol_type"],
                     )
                 )
@@ -239,12 +239,12 @@ def init_testserver_advanced(variables):
 
 @pytest.fixture(scope="session")
 def testserver_advanced():
-    with init_testserver_advanced(
-        [
-            TEST_DATASET["single_small"],
-            TEST_DATASET["single_large"],
-            # TEST_DATASET["array_small"],
-            # TEST_DATASET["array_large"],
-        ]
-    ) as testserver:
+    datasets = [
+        TEST_DATASET["single_small"],
+        TEST_DATASET["single_large"],
+        TEST_DATASET["array_small"],
+        # TEST_DATASET["array_large"],
+    ]
+    with init_testserver_advanced(datasets) as testserver:
+        testserver.total_variables = get_total_length(datasets)
         yield testserver

@@ -91,7 +91,7 @@ def test_false_write_by_name(testserver_advanced, testserver_target):
 def test_get_all_symbols(testserver_advanced, testserver_target):
     """Test getting all symbols using the ADS client class."""
     all_symbols = testserver_target.get_all_symbols()
-    assert len(all_symbols) == TESTSERVER_TOTAL_VARIABLES
+    assert len(all_symbols) == testserver_advanced.total_variables
 
 
 def test_verify_ams_net_id():
