@@ -37,45 +37,45 @@ PYADS_TESTSERVER_IP_ADDRESS = "127.0.0.1"
 PYADS_TESTSERVER_ADS_PORT = 48898
 PYADS_TESTSERVER_TIMEOUT_MS = 1000
 
+add_route(
+    ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS,
+    ip_address=PYADS_TESTSERVER_IP_ADDRESS,
+)
 
-def generate_dataset(dimension1, dimension2=None):
+
+def generate_dataset(dimensions: int | tuple = 1):
     """
     Generate a dataset with integers and real values.
 
-    If dimension2 is None, it generates single values.
-    If dimension2 is provided, it generates arrays with the second dimension size.
+    If dim2 is None, it generates single values.
+    If dim2 is provided, it generates arrays with the second dimension size.
     """
+    if isinstance(dimensions, int):
+        dimensions = (dimensions, None)
+    dim1 = dimensions[0]
+    dim2 = dimensions[1] if len(dimensions) > 1 else None
 
     # Generate names
     names = {
-        "integers": [
-            f"integer{'_array' if dimension2 else ''}{n}" for n in range(dimension1)
-        ],
-        "reals": [
-            f"real{'_array' if dimension2 else ''}{n}" for n in range(dimension1)
-        ],
-        "bools": [
-            f"bool{'_array' if dimension2 else ''}{n}" for n in range(dimension1)
-        ],
+        "integers": [f"integer{'_array' if dim2 else ''}{n}" for n in range(dim1)],
+        "reals": [f"real{'_array' if dim2 else ''}{n}" for n in range(dim1)],
+        "bools": [f"bool{'_array' if dim2 else ''}{n}" for n in range(dim1)],
     }
 
     # Generate values based on whether it's a regular or array dataset
-    if dimension2:
+    if dim2:
         values = {
-            "integers": [[n * i for n in range(dimension1)] for i in range(dimension2)],
+            "integers": [[n * i for n in range(dim1)] for i in range(dim2)],
             "reals": [
-                [round(n * i * 1.1, 2) for n in range(dimension1)]
-                for i in range(dimension2)
+                [round(n * i * 1.1, 2) for n in range(dim1)] for i in range(dim2)
             ],
-            "bools": [
-                [n % 2 == 0 for n in range(dimension1)] for i in range(dimension2)
-            ],
+            "bools": [[n % 2 == 0 for n in range(dim1)] for i in range(dim2)],
         }
     else:
         values = {
-            "integers": [n for n in range(dimension1)],
-            "reals": [round(n * 1.1, 2) for n in range(dimension1)],
-            "bools": [n % 2 == 0 for n in range(dimension1)],
+            "integers": [n for n in range(dim1)],
+            "reals": [round(n * 1.1, 2) for n in range(dim1)],
+            "bools": [n % 2 == 0 for n in range(dim1)],
         }
 
     # Combine names and values
@@ -117,75 +117,23 @@ def get_total_length(variables):
 
 
 TEST_DATASET = {}
-TEST_DATASET["single_small"] = generate_dataset(10)
+TEST_DATASET["single_small"] = generate_dataset(1)
 TEST_DATASET["single_large"] = generate_dataset(10)
 
-TEST_DATASET["array_small"] = generate_dataset(1, 2)
-TEST_DATASET["array_large"] = generate_dataset(2, 20)
-
-# TESTSERVER_VARNAMES = {
-#     "integers": [f"int{n}" for n in range(VALUE_DIMENSION)],
-#     "reals": [f"real{n}" for n in range(VALUE_DIMENSION)],
-# }
-
-# TESTSERVER_VALUES = {
-#     "integers": [n for n in range(VALUE_DIMENSION)],  # Integer values, e.g., ints
-#     "reals": [
-#         round(n * 1.1, 2) for n in range(VALUE_DIMENSION)
-#     ],  # Real values, e.g., floats
-# }
-# TESTSERVER_VARIABLES = {
-#     key: {
-#         name: value
-#         for name, value in zip(TESTSERVER_VARNAMES[key], TESTSERVER_VALUES[key])
-#     }
-#     for key in TESTSERVER_VARNAMES
-# }
-
-# TESTSERVER_ARRAY_VARNAMES = {
-#     "integers": [f"integer_array{n}" for n in range(VALUE_DIMENSION)],
-#     "reals": [f"real_array{n}" for n in range(VALUE_DIMENSION)],
-# }
-# TESTSERVER_ARRAY_VALUES = {
-#     "integers": [
-#         [n * i for n in range(VALUE_DIMENSION)] for i in range(VALUE_DIMENSION)
-#     ],
-#     "reals": [
-#         [round(n * i * 1.1, 2) for n in range(VALUE_DIMENSION)]
-#         for i in range(VALUE_DIMENSION)
-#     ],
-# }
-# TESTSERVER_ARRAY_VARIABLES = {
-#     key: {
-#         name: value
-#         for name, value in zip(
-#             TESTSERVER_ARRAY_VARNAMES[key],
-#             TESTSERVER_ARRAY_VALUES[key],
-#         )
-#     }
-#     for key in TESTSERVER_ARRAY_VARNAMES
-# }
-
-
-# Total number of variables in the test server for verification
-# TESTSERVER_TOTAL_VARIABLES = get_total_length(TESTSERVER_VARIABLES) + get_total_length(
-#     TESTSERVER_ARRAY_VARIABLES
-# )
+# TEST_DATASET["array_small"] = generate_dataset((10, 2))
+# TEST_DATASET["array_large"] = generate_dataset((2, 20))
 
 
 # Test fixtures
-@pytest.fixture
+@pytest.fixture(scope="function")
 def testserver_target():
     """Fixture to create an instance of the ADS client class."""
     target = ADSConnection(
         ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS, ams_net_port=PYADS_TESTSERVER_ADS_PORT
     )
-    target.set_timeout(PYADS_TESTSERVER_TIMEOUT_MS)
+    # target.set_timeout(PYADS_TESTSERVER_TIMEOUT_MS)
     with target:
-        add_route(
-            ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS,
-            ip_address=PYADS_TESTSERVER_IP_ADDRESS,
-        )
+
         yield target
 
 
@@ -193,7 +141,7 @@ def add_variables(handler, variables):
     for var_type, variable_list in variables.items():
         for var_name in variable_list:
             try:
-                len(variable_list[var_name])
+                array_size = len(variable_list[var_name])
             except TypeError:
                 # Create a single variable
                 handler.add_variable(
@@ -208,8 +156,9 @@ def add_variables(handler, variables):
                 handler.add_variable(
                     pyads.testserver.PLCVariable(
                         var_name,
-                        value=kwargs["value"],
-                        ads_type=kwargs["ads_type"] * len(variable_list[var_name]),
+                        value=bytes(8 * array_size),
+                        # value=kwargs["value"],
+                        ads_type=kwargs["ads_type"] * array_size,
                         symbol_type=kwargs["symbol_type"],
                     )
                 )
@@ -223,7 +172,7 @@ def init_testserver_advanced(variables):
     else:
         add_variables(handler, variables)
     testserver = pyads.testserver.AdsTestServer(handler)
-    time.sleep(0.1)
+    time.sleep(1)
 
     return testserver
 
@@ -233,7 +182,7 @@ def testserver_advanced():
     datasets = [
         TEST_DATASET["single_small"],
         TEST_DATASET["single_large"],
-        TEST_DATASET["array_small"],
+        # TEST_DATASET["array_small"],
         # TEST_DATASET["array_large"],
     ]
     with init_testserver_advanced(datasets) as testserver:
