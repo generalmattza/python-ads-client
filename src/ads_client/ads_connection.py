@@ -22,30 +22,34 @@ from ads_client.constants import ERROR_STRUCTURE
 logger = logging.getLogger(__name__)
 
 
-
-
 class AMSNetIDFormatError(Exception):
     """Custom exception for invalid AMS Net ID format."""
-    
+
     def __init__(self, message: str):
         # Initialize the base Exception with the custom message
         super().__init__(message)
         self.message = message
 
+
 def verify_ams_net_id(ams_net_id: str) -> bool:
     """Verify if the ams_net_id follows the format 'x.x.x.x.x.x' where x is an integer between 0 and 255."""
-    
+
     # Regular expression to match 6 groups of integers (0-255) separated by dots
-    pattern = r'^(\d{1,3}\.){5}\d{1,3}$'
+    pattern = r"^(\d{1,3}\.){5}\d{1,3}$"
 
     # First check if the format is correct with 6 parts separated by '.'
     if not re.match(pattern, ams_net_id):
-        raise AMSNetIDFormatError('Invalid ams_net_id format, ensure that format is 6 parts separated by periods.')
-    
+        raise AMSNetIDFormatError(
+            "Invalid ams_net_id format, ensure that format is 6 parts separated by periods."
+        )
+
     # Split the ams_net_id by dots and check each part is within the range 0-255
-    parts = ams_net_id.split('.')
+    parts = ams_net_id.split(".")
     if not all(0 <= int(part) <= 255 for part in parts):
-        raise AMSNetIDFormatError('Invalid ams_net_id format, ensure that numerical values are integers within range 0-255')
+        raise AMSNetIDFormatError(
+            "Invalid ams_net_id format, ensure that numerical values are integers within range 0-255"
+        )
+
 
 def id_generator(prefix: str = "instance"):
     """Generator function to create unique IDs with a configurable prefix."""
@@ -54,11 +58,12 @@ def id_generator(prefix: str = "instance"):
         yield f"{prefix}-{counter}"
         counter += 1
 
+
 class ADSConnection(pyads.Connection):
     """Class to manage an ADS client connection"""
 
-    connection_id = id_generator('ads_connection')
-    
+    connection_id = id_generator("ads_connection")
+
     # Class-level metrics to be shared across instances
     open_events = Counter(
         name="ads_client_connection_open_events",
@@ -87,7 +92,7 @@ class ADSConnection(pyads.Connection):
         ip_address: str = None,
         ams_net_port: str = pyads.PORT_TC3PLC1,
         name: str = None,
-        verify_is_open: bool = False
+        verify_is_open: bool = False,
     ):
         if name:
             self.name = name
@@ -103,7 +108,9 @@ class ADSConnection(pyads.Connection):
         )
 
         # Initialize the parent class (pyads.Connection)
-        super().__init__(ams_net_id=ams_net_id, ams_net_port=ams_net_port, ip_address=ip_address)
+        super().__init__(
+            ams_net_id=ams_net_id, ams_net_port=ams_net_port, ip_address=ip_address
+        )
 
         # Ensure connection is open if requested
         if verify_is_open:
@@ -122,25 +129,41 @@ class ADSConnection(pyads.Connection):
             if verify:
                 assert super().read_by_name(varName) == value
 
-    def write_array_by_name(self, varName: str, value: Any, plc_datatype = None, verify: bool = False) -> None:
+    def write_array_by_name(
+        self, varName: str, value: Any, plc_datatype=None, verify: bool = False
+    ) -> None:
         """Write an array to a PLC variable."""
         if plc_datatype is None:
             logger.warning("No PLC datatype provided, defaulting to LREAL")
             plc_datatype = pyads.PLCTYPE_LREAL
         with self:
-            super().write_by_name(varName, value, plc_datatype=plc_datatype*len(value))
+            super().write_by_name(
+                varName, value, plc_datatype=plc_datatype * len(value)
+            )
             if verify:
-                assert super().read_by_name(varName, plc_datatype=plc_datatype*len(value)) == value
+                assert (
+                    super().read_by_name(
+                        varName,
+                        plc_datatype=(
+                            plc_datatype * len(value) if plc_datatype else None
+                        ),
+                    )
+                    == value
+                )
 
-    def write_list_array_by_name(self, variables: dict, plc_datatype = None, verify: bool = False) -> None:
+    def write_list_array_by_name(
+        self, variables: dict, plc_datatype=None, verify: bool = False
+    ) -> None:
         """Write multiple arrays to PLC variables."""
         if plc_datatype is None:
             logger.warning("No PLC datatype provided, defaulting to LREAL")
             plc_datatype = pyads.PLCTYPE_LREAL
         with self:
             for varName, value in variables.items():
-                self.write_array_by_name(varName, value, plc_datatype=plc_datatype, verify=verify)
-                
+                self.write_array_by_name(
+                    varName, value, plc_datatype=plc_datatype, verify=verify
+                )
+
     def write_list_by_name(self, variables: dict, verify: bool = False) -> None:
         """Write multiple values to PLC variables."""
         with self:
@@ -148,10 +171,36 @@ class ADSConnection(pyads.Connection):
             if verify:
                 assert super().read_list_by_name(variables) == variables
 
-    def read_by_name(self, varName: str, plc_datatype = None) -> Any:
+    def read_by_name(self, varName: str, plc_datatype=None) -> Any:
         """Read a PLC variable by name."""
         with self:
-            return super().read_by_name(varName, plc_datatype=plc_datatype)
+            try:
+                return super().read_by_name(varName, plc_datatype=plc_datatype)
+            except TypeError:
+                logger.warning(
+                    f"Variable {varName} does not have a type declared in PLC. Ignoring read operation."
+                )
+
+    def read_array_by_name(self, varName: str, plc_datatype=None, array_size=1):
+        """Read an array from a PLC variable."""
+        with self:
+            return super().read_by_name(
+                varName,
+                plc_datatype=plc_datatype * array_size if plc_datatype else None,
+            )
+
+    def read_list_array_by_name(
+        self, varNames: Union[str, list, tuple, set], plc_datatype=None, array_size=1
+    ):
+        """Read multiple PLC variables by their names."""
+        with self:
+            return {
+                varName: super().read_by_name(
+                    varNames,
+                    plc_datatype=plc_datatype * array_size if plc_datatype else None,
+                )
+                for varName in varNames
+            }
 
     def read_list_by_name(self, varNames: Union[str, list, tuple, set]):
         """Read multiple PLC variables by their names."""
@@ -202,4 +251,4 @@ class ADSConnection(pyads.Connection):
         return f"{self.ip_address}:{self.ams_net_port}"
 
     def __repr__(self):
-        return f"ADSTarget(ams_net_id={self.ams_net_id}, ams_net_port={self.ams_net_port}, name={self.name})"
+        return f"{self.__class__.__name__}(ams_net_id={self.ams_net_id}, ams_net_port={self.ams_net_port}, name={self.name})"

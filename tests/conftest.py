@@ -16,6 +16,7 @@ import pyads
 
 from ads_client import ADSConnection
 from config_loader import load_configs
+from utils import add_route
 
 try:
     import pyads.testserver
@@ -25,7 +26,7 @@ except FileNotFoundError as e:
     )
     raise e
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("testing")
 
 # Configure logging using the specified logging configuration
 dictConfig(load_configs("config/logging.yaml"))
@@ -172,20 +173,6 @@ TEST_DATASET["array_large"] = generate_dataset(2, 20)
 # )
 
 
-def add_route(ams_net_id="127.0.0.1.1.1", ip_address="127.0.0.1"):
-    try:
-        pyads.add_route(ams_net_id, ip_address)
-    except (pyads.ADSError, RuntimeError) as e:
-        logger.warning(f"Unable to create route {e}. Continuing without route.")
-        pass
-
-
-add_route(
-    ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS,
-    ip_address=PYADS_TESTSERVER_IP_ADDRESS,
-)
-
-
 # Test fixtures
 @pytest.fixture
 def testserver_target():
@@ -195,6 +182,10 @@ def testserver_target():
     )
     target.set_timeout(PYADS_TESTSERVER_TIMEOUT_MS)
     with target:
+        add_route(
+            ams_net_id=PYADS_TESTSERVER_ADS_ADDRESS,
+            ip_address=PYADS_TESTSERVER_IP_ADDRESS,
+        )
         yield target
 
 

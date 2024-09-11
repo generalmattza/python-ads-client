@@ -2,6 +2,7 @@
 version: 1
 
 disable_existing_loggers: false
+propagate: false
 
 formatters:
   brief:
@@ -22,9 +23,3 @@ handlers:
     formatter: default
     level: DEBUG
     stream: ext://sys.stdout
-
-loggers:
-  root:
-    level: DEBUG
-    handlers:
-      - console
