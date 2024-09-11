@@ -122,12 +122,45 @@ class ADSConnection(pyads.Connection):
             with self:
                 assert self.is_open
 
-    def write_by_name(self, varName: str, value: Any, verify: bool = False) -> None:
+    def write_by_name(
+        self,
+        data_name: str,
+        value: Any,
+        plc_datatype=None,
+        handle=None,
+        verify: bool = False,
+        cache_symbol_info: bool = True,
+    ) -> None:
         """Write a value to a PLC variable."""
         with self:  # Using context manager to ensure connection is open
-            super().write_by_name(varName, value)
+            super().write_by_name(
+                data_name, value, plc_datatype, handle, cache_symbol_info
+            )
             if verify:
-                assert super().read_by_name(varName) == value
+                assert super().read_by_name(data_name) == value
+
+    def read_by_name(
+        self,
+        data_name: str,
+        plc_datatype=None,
+        handle: int | None = None,
+        check_length: bool = True,
+        cache_symbol_info: bool = True,
+    ) -> Any:
+        """Read a PLC variable by name."""
+        with self:
+            try:
+                return super().read_by_name(
+                    data_name,
+                    plc_datatype=plc_datatype,
+                    handle=handle,
+                    check_length=check_length,
+                    cache_symbol_info=cache_symbol_info,
+                )
+            except TypeError:
+                logger.warning(
+                    f"Variable {data_name} does not have a type declared in PLC. Ignoring read operation."
+                )
 
     def write_array_by_name(
         self, varName: str, value: Any, plc_datatype=None, verify: bool = False
@@ -171,16 +204,6 @@ class ADSConnection(pyads.Connection):
             if verify:
                 assert super().read_list_by_name(variables) == variables
 
-    def read_by_name(self, varName: str, plc_datatype=None) -> Any:
-        """Read a PLC variable by name."""
-        with self:
-            try:
-                return super().read_by_name(varName, plc_datatype=plc_datatype)
-            except TypeError:
-                logger.warning(
-                    f"Variable {varName} does not have a type declared in PLC. Ignoring read operation."
-                )
-
     def read_array_by_name(self, varName: str, plc_datatype=None, array_size=1):
         """Read an array from a PLC variable."""
         with self:
@@ -196,16 +219,17 @@ class ADSConnection(pyads.Connection):
         with self:
             return {
                 varName: super().read_by_name(
-                    varNames,
+                    varName,
                     plc_datatype=plc_datatype * array_size if plc_datatype else None,
+                    check_length=False,
                 )
                 for varName in varNames
             }
 
-    def read_list_by_name(self, varNames: Union[str, list, tuple, set]):
+    def read_list_by_name(self, data_names: Union[str, list, tuple, set]):
         """Read multiple PLC variables by their names."""
         with self:
-            return super().read_list_by_name(varNames)
+            return super().read_list_by_name(data_names)
 
     def read_errors(self, varName: str, number_of_errors=1):
         """Read error messages."""

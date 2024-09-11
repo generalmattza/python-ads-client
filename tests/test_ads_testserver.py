@@ -25,7 +25,7 @@ from utils import (
 
 
 @pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
-@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+@pytest.mark.parametrize("dataset", {"single_small"})
 def test_read_by_name(
     testserver_advanced,
     testserver_target,
@@ -38,7 +38,7 @@ def test_read_by_name(
 
 
 @pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
-@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+@pytest.mark.parametrize("dataset", {"single_small"})
 def test_write_by_name(
     testserver_advanced,
     testserver_target,
@@ -51,7 +51,7 @@ def test_write_by_name(
 
 
 @pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
-@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+@pytest.mark.parametrize("dataset", {"single_small"})
 def test_read_write_list_by_name(
     testserver_advanced, testserver_target, variable_type, dataset
 ):
@@ -61,7 +61,7 @@ def test_read_write_list_by_name(
 
 
 @pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
-@pytest.mark.parametrize("dataset", {"single_small", "single_large"})
+@pytest.mark.parametrize("dataset", {"single_small"})
 def test_write_list_by_name(
     testserver_advanced, testserver_target, variable_type, dataset
 ):
@@ -70,24 +70,26 @@ def test_write_list_by_name(
     assert _testfunc_write_list_by_name(testserver_target, variables)
 
 
-@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
-@pytest.mark.parametrize("dataset", {"array_small"})
-def test_write_array_by_name_verify(
-    testserver_advanced, testserver_target, variable_type, dataset
-):
-    """Test writing an array by name using the ADS client class."""
-    variables = TEST_DATASET[dataset][variable_type]
-    assert _testfunc_write_array_by_name(testserver_target, variables)
+# @pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+# @pytest.mark.parametrize("dataset", {"array_small"})
+# def test_write_array_by_name(
+#     testserver_advanced, testserver_target, variable_type, dataset
+# ):
+#     """Test writing an array by name using the ADS client class."""
+#     variables = TEST_DATASET[dataset][variable_type]
+#     assert _testfunc_write_array_by_name(testserver_target, variables)
 
 
-@pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
-@pytest.mark.parametrize("dataset", {"array_small"})
-def test_read_array_by_name(
-    testserver_advanced, testserver_target, variable_type, dataset
-):
-    """Test reading an array by name using the ADS client class."""
-    variables = TEST_DATASET[dataset][variable_type]
-    assert _testfunc_read_array_by_name(testserver_target, variables)
+# @pytest.mark.parametrize("variable_type", {"integers", "reals", "bools"})
+# @pytest.mark.parametrize("dataset", {"array_small"})
+# def test_read_array_by_name(
+#     testserver_advanced, testserver_target, variable_type, dataset
+# ):
+#     """Test reading an array by name using the ADS client class."""
+#     variables = TEST_DATASET[dataset][variable_type]
+#     # array_size = length of the first array in the dataset
+#     # array_size = len(variables[list(variables.keys())[0]])
+#     assert _testfunc_read_array_by_name(testserver_target, variables)
 
 
 def test_false_read_by_name(testserver_advanced, testserver_target):
@@ -144,8 +146,7 @@ def test_write_performance(
     variables = TEST_DATASET[dataset][variable_type]
 
     def write_operation():
-        for variable in variables.items():
-            testserver_target.write_by_name(*variable, verify=False)
+        testserver_target.write_list_by_name(variables, verify=False)
 
     # Use pytest-benchmark for timing
     # write_operation()

@@ -43,30 +43,25 @@ def _testfunc_write_array_by_name(target: ADSConnection, variables: dict):
     """Function for testing writing an array by name using the ADS client class."""
     for var_name, value in variables.items():
         target.write_array_by_name(var_name, value, verify=False)
-    read_variables = target.read_array_by_name(variables)
+    read_variables = target.read_list_array_by_name(variables)
     return variables == read_variables
 
 
 def _testfunc_write_list_array_by_name(target: ADSConnection, variables: dict):
     """Function for testing writing multiple arrays by name using the ADS client class."""
     target.write_list_array_by_name(variables, verify=False)
-    read_variables = target.read_list_by_name(variables)
+    read_variables = target.read_list_array_by_name(variables)
     return variables == read_variables
 
 
-def _testfunc_read_array_by_name(
-    target: ADSConnection, variables: dict, plc_datatype=None, array_size=1
-):
+def _testfunc_read_array_by_name(target: ADSConnection, variables: dict):
     """Function for testing reading an array by name using the ADS client class."""
     # First write the variables to the PLC
     for var_name, value in variables.items():
         target.write_array_by_name(var_name, value)
     # Then read the variables back
     read_variables = {
-        var_name: target.read_array_by_name(
-            var_name, plc_datatype=plc_datatype, array_size=array_size
-        )
-        for var_name in variables
+        var_name: target.read_array_by_name(var_name) for var_name in variables
     }
     # Assert that the read variables are equal to the written variables
     return variables == read_variables
