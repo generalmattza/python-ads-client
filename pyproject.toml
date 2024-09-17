@@ -43,10 +43,11 @@ version = { attr = "ads_client.__version__" }
 [project.optional-dependencies]
 test = ["pytest >= 7.1.1"]
 
-# [tool.pytest.ini_options]
-# log_cli = true
-# log_cli_level = "CRITICAL"
-# log_cli_format = "%(message)s"
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "CRITICAL"
+log_cli_format = "%(message)s"
+# addopts = "-n 10"
 
 # [project.urls]
 # homepage = "https://example.com"

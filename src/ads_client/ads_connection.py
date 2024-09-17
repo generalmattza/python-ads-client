@@ -122,12 +122,45 @@ class ADSConnection(pyads.Connection):
             with self:
                 assert self.is_open
 
-    def write_by_name(self, data_name: str, value: Any, verify: bool = False) -> None:
+    def write_by_name(
+        self,
+        data_name: str,
+        value: Any,
+        plc_datatype=None,
+        handle=None,
+        verify: bool = False,
+        cache_symbol_info: bool = True,
+    ) -> None:
         """Write a value to a PLC variable."""
         with self:  # Using context manager to ensure connection is open
-            super().write_by_name(data_name, value)
+            super().write_by_name(
+                data_name, value, plc_datatype, handle, cache_symbol_info
+            )
             if verify:
                 assert super().read_by_name(data_name) == value
+
+    def read_by_name(
+        self,
+        data_name: str,
+        plc_datatype=None,
+        handle: int | None = None,
+        check_length: bool = True,
+        cache_symbol_info: bool = True,
+    ) -> Any:
+        """Read a PLC variable by name."""
+        with self:
+            try:
+                return super().read_by_name(
+                    data_name,
+                    plc_datatype=plc_datatype,
+                    handle=handle,
+                    check_length=check_length,
+                    cache_symbol_info=cache_symbol_info,
+                )
+            except TypeError:
+                logger.warning(
+                    f"Variable {data_name} does not have a type declared in PLC. Ignoring read operation."
+                )
 
     def write_array_by_name(
         self, data_name: str, value: Any, plc_datatype=None, verify: bool = False
@@ -198,6 +231,7 @@ class ADSConnection(pyads.Connection):
                 data_name: super().read_by_name(
                     data_names,
                     plc_datatype=plc_datatype * array_size if plc_datatype else None,
+                    check_length=False,
                 )
                 for data_name in data_names
             }
