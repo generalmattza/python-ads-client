@@ -86,14 +86,12 @@ class ADSClient:
         # Add to input buffer
         if read_data:
             # Build metric
+            processed_data = {}
             read_time = time.time()
-            read_data["time"] = read_time
-            read_data["measurement"] = self.name
-            read_data["tags"] = {"device": self.name}
-            read_data["fields"] = {"value": data["value"] for data in read_data}
+            processed_data["time"] = read_time
+            processed_data["measurement"] = self.name
+            processed_data["tags"] = {"device": self.name}
+            processed_data["fields"] = {"value": data["value"] for data in read_data}
 
-            logger.info(f"Adding {len(read_data)} metrics to queue")
-            if isinstance(read_data, (tuple, list)):
-                self._buffer.extend(read_data)
-            else:
-                self._buffer.append(read_data)
+            logger.info(f"Adding {len(processed_data)} metrics to queue")
+            self._buffer.append(processed_data)
