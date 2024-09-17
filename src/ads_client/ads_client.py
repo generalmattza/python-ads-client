@@ -87,11 +87,10 @@ class ADSClient:
         if read_data:
             # Build metric
             processed_data = {}
-            read_time = time.time()
-            processed_data["time"] = read_time
+            processed_data["time"] = time.time()
             processed_data["measurement"] = self.name
             processed_data["tags"] = {"device": self.name}
-            processed_data["fields"] = {"value": data["value"] for data in read_data}
+            processed_data["fields"] = read_data
 
             logger.info(f"Adding {len(processed_data)} metrics to queue")
             self._buffer.append(processed_data)
