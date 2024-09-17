@@ -14,7 +14,7 @@ from typing import Union
 from collections import deque
 from pathlib import Path
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ads_client import ADSConnection
 from pyads import ADSError
@@ -87,7 +87,7 @@ class ADSClient:
         if read_data:
             # Build metric
             processed_data = {}
-            processed_data["time"] = datetime.now(datetime.timezone.utc)
+            processed_data["time"] = datetime.now(timezone.utc)
             processed_data["measurement"] = self.name
             processed_data["tags"] = {"device": self.name}
             processed_data["fields"] = read_data
