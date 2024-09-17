@@ -14,7 +14,7 @@ from typing import Union
 from collections import deque
 from pathlib import Path
 import logging
-import time
+from datetime import datetime
 
 from ads_client import ADSConnection
 from pyads import ADSError
@@ -58,7 +58,7 @@ class ADSClient:
     async def do_work_periodically(self, *args, update_interval=None, **kwargs):
         update_interval = update_interval or self.update_interval
         while True:
-            await self.do_work(args, kwargs)
+            await self.do_work(*args, **kwargs)
             await asyncio.sleep(update_interval)
 
     async def do_work(self, *args, **kwargs):
@@ -87,7 +87,7 @@ class ADSClient:
         if read_data:
             # Build metric
             processed_data = {}
-            processed_data["time"] = time.time()
+            processed_data["time"] = datetime.now(datetime.timezone.utc)
             processed_data["measurement"] = self.name
             processed_data["tags"] = {"device": self.name}
             processed_data["fields"] = read_data
