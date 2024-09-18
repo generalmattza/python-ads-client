@@ -66,7 +66,7 @@ async def test_ads_clients_read():
     buffer = deque(maxlen=1_000)
 
     ads_clients = [
-        ADSClient(buffer=buffer, name=name, **target, retain_connection=True)
+        ADSClient(buffer=buffer, name=name, **target, retain_connection=False)
         for name, target in ADS_TARGETS_CONFIG.items()
     ]
 

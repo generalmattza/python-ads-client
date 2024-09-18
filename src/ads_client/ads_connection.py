@@ -123,6 +123,8 @@ class ADSConnection(pyads.Connection):
                 f"'retain_connection' is set to True. Connection {self.name} will be remain open until explicitly closed."
             )
 
+        self._retain_connection_warning = False
+
     def _ensure_open(self):
         """Ensure the connection is open using a context manager."""
         if not self.is_open:
@@ -280,6 +282,11 @@ class ADSConnection(pyads.Connection):
 
     def close(self):
         if self.retain_connection:
+            if not self._retain_connection_warning:
+                logger.warning(
+                    f"'ADSConnection.close()' was called, but 'ADSConnection.retain_connection' is set to True. Connection {self.name} will be remain open until explicitly closed. This warning will not be shown again."
+                )
+                self._retain_connection_warning = True
             return
         self._close()
 
@@ -288,11 +295,14 @@ class ADSConnection(pyads.Connection):
             return
         logger.debug(f"Closing connection to {self.connection_address}")
         super().close()
-        logger.debug(f"Connection to {self.connection_address} closed")
+        logger.info(f"Connection to {self.connection_address} closed")
         self.close_events.labels(self.ams_net_id).inc()
 
     def ensure_closed(self):
         """Force close the connection."""
+        self._close()
+
+    def __del__(self):
         self._close()
 
     @property

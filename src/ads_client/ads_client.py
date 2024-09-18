@@ -91,7 +91,7 @@ class ADSClient:
         if read_data:
             # Build metric
             processed_data = {}
-            processed_data["time"] = datetime.now(timezone.utc)
+            processed_data["time"] = datetime.now(timezone.utc).timestamp()
             processed_data["measurement"] = self.name
             processed_data["tags"] = {"device": self.name}
             processed_data["fields"] = read_data
