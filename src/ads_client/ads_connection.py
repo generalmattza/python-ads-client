@@ -93,6 +93,7 @@ class ADSConnection(pyads.Connection):
         ams_net_port: str = pyads.PORT_TC3PLC1,
         name: str = None,
         verify_is_open: bool = False,
+        retain_connection: bool = False,
     ):
         if name:
             self.name = name
@@ -115,6 +116,12 @@ class ADSConnection(pyads.Connection):
         # Ensure connection is open if requested
         if verify_is_open:
             self._ensure_open()
+
+        self.retain_connection = retain_connection
+        if retain_connection:
+            logger.warning(
+                f"'retain_connection' is set to True. Connection {self.name} will be remain open until explicitly closed."
+            )
 
     def _ensure_open(self):
         """Ensure the connection is open using a context manager."""
@@ -272,12 +279,21 @@ class ADSConnection(pyads.Connection):
         self.open_events.labels(self.ams_net_id).inc()
 
     def close(self):
+        if self.retain_connection:
+            return
+        self._close()
+
+    def _close(self):
         if not self.is_open:
             return
         logger.debug(f"Closing connection to {self.connection_address}")
         super().close()
         logger.debug(f"Connection to {self.connection_address} closed")
         self.close_events.labels(self.ams_net_id).inc()
+
+    def ensure_closed(self):
+        """Force close the connection."""
+        self._close()
 
     @property
     def connection_address(self):

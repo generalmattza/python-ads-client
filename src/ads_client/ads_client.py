@@ -45,11 +45,15 @@ class ADSClient:
         data_names=None,
         update_interval: int = 1,
         retry_attempts: int = 10,
+        retain_connection: bool = False,
     ):
         self.name = name or next(self.client_id)
         self._buffer = buffer
         self.target = ADSConnection(
-            ams_net_id=ams_net_id, ip_address=ip_address, ams_net_port=ams_net_port
+            ams_net_id=ams_net_id,
+            ip_address=ip_address,
+            ams_net_port=ams_net_port,
+            retain_connection=retain_connection,
         )
         self.update_interval = update_interval
         self.data_names = data_names

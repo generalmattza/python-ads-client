@@ -66,7 +66,7 @@ async def test_ads_clients_read():
     buffer = deque(maxlen=1_000)
 
     ads_clients = [
-        ADSClient(buffer=buffer, name=name, **target)
+        ADSClient(buffer=buffer, name=name, **target, retain_connection=True)
         for name, target in ADS_TARGETS_CONFIG.items()
     ]
 
@@ -79,7 +79,7 @@ async def test_ads_clients_write():
     buffer = deque(maxlen=1_000)
 
     ads_clients = [
-        ADSClientWriter(buffer=buffer, name=name, **target)
+        ADSClientWriter(buffer=buffer, name=name, **target, retain_connection=True)
         for name, target in ADS_TARGETS_CONFIG.items()
     ]
 
