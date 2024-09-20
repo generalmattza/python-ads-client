@@ -37,7 +37,7 @@ class ADSClient:
 
     def __init__(
         self,
-        buffer: Union[list, deque],
+        buffer: Union[list, deque] = None,
         name: str = None,
         ams_net_id=None,
         ip_address=None,
@@ -48,7 +48,7 @@ class ADSClient:
         retain_connection: bool = False,
     ):
         self.name = name or next(self.client_id)
-        self._buffer = buffer
+        self._buffer = buffer if buffer is None else deque()
         self.target = ADSConnection(
             ams_net_id=ams_net_id,
             ip_address=ip_address,

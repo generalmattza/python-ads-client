@@ -37,10 +37,10 @@ def bool_wave(threshold=0.5, frequency=1):
 class ADSClientWriter(ADSClient):
     """ADSClient class to manage the connection to an ADS target device and write data to it."""
 
-    sine_wave_1 = sine_wave(return_type=int)
-    sine_wave_2 = sine_wave(return_type=int, phase=90, frequency=2)
-    sine_wave_3 = sine_wave(return_type=int, phase=180, frequency=3)
-    sine_wave_4 = sine_wave(return_type=int, phase=270, frequency=4)
+    sine_wave_1 = sine_wave(return_type=float, frequency=0.25)
+    sine_wave_2 = sine_wave(return_type=float, phase=90, frequency=0.5)
+    sine_wave_3 = sine_wave(return_type=float, phase=180, frequency=0.75)
+    sine_wave_4 = sine_wave(return_type=float, phase=270, frequency=1)
     bool_wave_1 = bool_wave()
     bool_wave_2 = bool_wave(frequency=3)
     generators = {
