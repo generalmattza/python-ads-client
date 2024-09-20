@@ -48,7 +48,7 @@ class ADSClient:
         retain_connection: bool = False,
     ):
         self.name = name or next(self.client_id)
-        self._buffer = buffer if buffer is None else deque()
+        self._buffer = buffer if buffer is not None else deque()
         self.target = ADSConnection(
             ams_net_id=ams_net_id,
             ip_address=ip_address,
