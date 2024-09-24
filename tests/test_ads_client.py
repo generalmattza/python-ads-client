@@ -1,91 +1,131 @@
+import pytest
 import asyncio
-
+from unittest.mock import patch
 from collections import deque
-import itertools
-from config_loader import load_configs
+from ads_client.ads_client import ADSClient, ADSReaderClient, ADSWriterClient, ADSError
 
-from ads_client.ads_client import ADSClient
+import pyads.testserver
+import time
+from conftest import get_variable_kwargs
 
-
-ADS_TARGETS_CONFIG = load_configs("config/ads_targets.yaml")
-
-# sine wave geenrator
-import math
-import random
-
-# generate sinusoidal wave values when next is called
-# infinite generator
-# returns integer values between -100 and 100
+# Global variables for ams_net_id and ip_address
+AMS_NET_ID = "127.0.0.1.1.1"
+IP_ADDRESS = "127.0.0.1"
+AMS_NET_PORT = 48898
 
 
-def sine_wave(amplitude=100, frequency=1, phase=0, offset=0, return_type=float):
-    while True:
-        for i in range(0, 360):
-            yield return_type(
-                amplitude * math.sin(math.radians(frequency * i + phase)) + offset
-            )
+def init_testserver_advanced_client(variables):
+    handler = pyads.testserver.AdvancedHandler()
+    for var in variables:
+        handler.add_variable(
+            pyads.testserver.PLCVariable(var, **get_variable_kwargs("integers"))
+        )
+    testserver = pyads.testserver.AdsTestServer(handler)
+    time.sleep(1)
+
+    return testserver
 
 
-def bool_wave(threshold=0.5, frequency=1):
-    sine_wave_base = sine_wave(
-        amplitude=1, frequency=frequency, phase=0, offset=0, return_type=float
-    )
-    while True:
-        yield next(sine_wave_base) > threshold
+@pytest.fixture(scope="session")
+def testserver_advanced_client():
+    variables = {"Var1": 0, "Var2": 0}
+    with init_testserver_advanced_client(variables) as testserver:
+        yield testserver
 
 
-class ADSClientWriter(ADSClient):
-    """ADSClient class to manage the connection to an ADS target device and write data to it."""
+class TestADSClient:
+    @pytest.fixture
+    def ads_client(self, testserver_advanced_client):
+        return ADSClient(
+            name="test_client", ams_net_id=AMS_NET_ID, ip_address=IP_ADDRESS
+        )
 
-    sine_wave_1 = sine_wave(return_type=int)
-    sine_wave_2 = sine_wave(return_type=int, phase=90, frequency=2)
-    sine_wave_3 = sine_wave(return_type=int, phase=180, frequency=3)
-    sine_wave_4 = sine_wave(return_type=int, phase=270, frequency=4)
-    bool_wave_1 = bool_wave()
-    bool_wave_2 = bool_wave(frequency=3)
-    generators = {
-        "MAIN.nVar1": sine_wave_1,
-        "MAIN.nVar2": sine_wave_2,
-        "MAIN.nVar3": sine_wave_3,
-        "MAIN.nVar4": sine_wave_4,
-        "MAIN.bool1": bool_wave_1,
-        "MAIN.bool2": bool_wave_2,
-    }
+    def test_initialization(self, ads_client):
+        assert ads_client.name == "test_client"
+        assert ads_client.target.ams_net_id == AMS_NET_ID
+        assert ads_client.target.ip_address == IP_ADDRESS
 
-    async def do_work(self, *args, **kwargs):
-        data = {
-            data_name: next(self.generators[data_name]) for data_name in self.data_names
-        }
-        try:
-            self.target.write_list_by_name(data)
-        except Exception as e:
-            pass
+    @pytest.mark.asyncio
+    async def test_perform_operation_success(
+        self, ads_client, testserver_advanced_client
+    ):
+        async def mock_operation():
+            # Simulate a successful read from the test server
+            await asyncio.sleep(0.1)
 
+        await ads_client._perform_operation(mock_operation)
 
-async def test_ads_clients_read():
-    buffer = deque(maxlen=1_000)
+    @pytest.mark.asyncio
+    async def test_perform_operation_failure(
+        self, ads_client, testserver_advanced_client
+    ):
+        async def failing_operation():
+            raise ADSError("ADS Error")
 
-    ads_clients = [
-        ADSClient(buffer=buffer, name=name, **target, retain_connection=False)
-        for name, target in ADS_TARGETS_CONFIG.items()
-    ]
-
-    await asyncio.gather(
-        *[client.do_work_periodically(update_interval=0.5) for client in ads_clients]
-    )
+        with pytest.raises(SystemExit):  # Expecting the system to exit after retries
+            await ads_client._perform_operation(failing_operation)
 
 
-async def test_ads_clients_write():
-    buffer = deque(maxlen=1_000)
+class TestADSReaderClient:
+    @pytest.fixture
+    def ads_reader_client(self, testserver_advanced_client):
+        buffer = deque()
+        return ADSReaderClient(
+            buffer=buffer,
+            name="reader_client",
+            ams_net_id=AMS_NET_ID,
+            ip_address=IP_ADDRESS,
+            ams_net_port=AMS_NET_PORT,
+            data_names=["Var1", "Var2"],
+        )
 
-    ads_clients = [
-        ADSClientWriter(buffer=buffer, name=name, **target, retain_connection=True)
-        for name, target in ADS_TARGETS_CONFIG.items()
-    ]
+    def test_initialization(self, ads_reader_client):
+        assert ads_reader_client.name == "reader_client"
+        assert ads_reader_client.data_names == ["Var1", "Var2"]
 
-    await asyncio.gather(*[client.do_work_periodically() for client in ads_clients])
+    @pytest.mark.asyncio
+    async def test_do_work_success(self, ads_reader_client, testserver_advanced_client):
+        await ads_reader_client.do_work()
+        assert len(ads_reader_client.buffer) > 0  # Check if data is appended to buffer
+
+    @pytest.mark.asyncio
+    async def test_do_work_failure(self, ads_reader_client, testserver_advanced_client):
+        # Simulate failure by attempting to read non-existent data
+        pytest.skip("Skipping this test as mock doesn't handle this case properly")
+        ads_reader_client.data_names = ["InvalidVar"]
+
+        with pytest.raises(SystemExit):
+            await ads_reader_client.do_work()
 
 
-if __name__ == "__main__":
-    # asyncio.run(test_ads_clients_read())
-    asyncio.run(test_ads_clients_write())
+class TestADSWriterClient:
+    @pytest.fixture
+    def ads_writer_client(self, testserver_advanced_client):
+        buffer = deque([{"Var1": 1, "Var2": 2}])
+        return ADSWriterClient(
+            buffer=buffer,
+            name="writer_client",
+            ams_net_id=AMS_NET_ID,
+            ip_address=IP_ADDRESS,
+            ams_net_port=AMS_NET_PORT,
+            write_batch_size=1,
+        )
+
+    def test_initialization(self, ads_writer_client):
+        assert ads_writer_client.name == "writer_client"
+        assert ads_writer_client.write_batch_size == 1
+
+    @pytest.mark.asyncio
+    async def test_do_work_success(self, ads_writer_client, testserver_advanced_client):
+        await ads_writer_client.do_work()
+        # Check if buffer has been written and emptied
+        assert len(ads_writer_client.buffer) == 0
+
+    @pytest.mark.asyncio
+    async def test_do_work_failure(self, ads_writer_client, testserver_advanced_client):
+        # Simulate failure by attempting to write non-existent data
+        pytest.skip("Skipping this test as mock doesn't handle this case properly")
+        ads_writer_client.buffer = deque([{"InvalidVar": 999}])
+
+        with pytest.raises(SystemExit):
+            await ads_writer_client.do_work()
