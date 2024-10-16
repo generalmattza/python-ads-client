@@ -113,17 +113,16 @@ class ADSConnection(pyads.Connection):
             ams_net_id=ams_net_id, ams_net_port=ams_net_port, ip_address=ip_address
         )
 
-        # Ensure connection is open if requested
-        if verify_is_open:
-            self._ensure_open()
-
         self.retain_connection = retain_connection
         if retain_connection:
             logger.warning(
                 f"'retain_connection' is set to True. Connection {self.name} will be remain open until explicitly closed."
             )
-
         self._retain_connection_warning = False
+
+        # Ensure connection is open if requested
+        if verify_is_open:
+            self._ensure_open()
 
     def _ensure_open(self):
         """Ensure the connection is open using a context manager."""
