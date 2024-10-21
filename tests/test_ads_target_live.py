@@ -28,9 +28,9 @@ def ads_target_live():
     )
 
     with target:
-        # add_route(
-        #     ams_net_id=ADS_TARGET_NETID_LIVE, ip_address=ADS_TARGET_IP_ADDRESS_LIVE
-        # )
+        add_route(
+            ams_net_id=ADS_TARGET_NETID_LIVE, ip_address=ADS_TARGET_IP_ADDRESS_LIVE
+        )
         yield target
 
 
@@ -45,9 +45,9 @@ def ads_target_live_retained():
     )
 
     with target:
-        # add_route(
-        #     ams_net_id=ADS_TARGET_NETID_LIVE, ip_address=ADS_TARGET_IP_ADDRESS_LIVE
-        # )
+        add_route(
+            ams_net_id=ADS_TARGET_NETID_LIVE, ip_address=ADS_TARGET_IP_ADDRESS_LIVE
+        )
         yield target
         target.ensure_closed()
 
