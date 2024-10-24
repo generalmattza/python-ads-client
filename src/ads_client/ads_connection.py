@@ -257,6 +257,15 @@ class ADSConnection(pyads.Connection):
             )
         )
 
+    def write_structure_by_name(
+        self, data_name: str, value: dict, structure_def: tuple, array_size=1
+    ):
+        """Write a structure to a PLC variable."""
+        with self:
+            super().write_structure_by_name(
+                data_name, json.loads(value), structure_def, array_size=array_size
+            )
+
     def read_device_info(self):
         """Read device information."""
         with self:
