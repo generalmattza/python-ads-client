@@ -16,7 +16,7 @@ from conftest import (
 )
 
 
-def init_testserver_advanced_client_client(variables):
+def init_testserver_advanced_client(variables):
     handler = pyads.testserver.AdvancedHandler()
     for var in variables:
         handler.add_variable(
@@ -29,9 +29,9 @@ def init_testserver_advanced_client_client(variables):
 
 
 @pytest.fixture(scope="session")
-def testserver_advanced_client_client():
+def testserver_advanced_client():
     variables = {"Var1": 0, "Var2": 0}
-    with init_testserver_advanced_client_client(variables) as testserver:
+    with init_testserver_advanced_client(variables) as testserver:
         yield testserver
 
 
